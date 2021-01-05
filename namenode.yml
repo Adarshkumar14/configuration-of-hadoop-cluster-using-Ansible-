@@ -1,0 +1,69 @@
+- name: namenode setup
+  hosts: namenode
+  gather_facts: no
+  
+  vars_prompt:
+  - name: namenode_dir
+    prompt: "enter dir name"
+    private: no
+  - name: namenode_ip
+    prompt: "enter namenode ip"
+    private: no
+
+  - name: hadoop_port
+    port: "9100"
+    private: no
+
+  tasks:
+  - name: copying hadoop rpm file
+    copy:
+            src: "/root/hadoop-1.2.1-1.x86_64.rpm"
+            dest: "/root"
+  - name: copying java
+    copy:
+            src: "/root/jdk-8u171-linux-x64.rpm"
+            dest: "/root/"
+  - name: installing java
+    command: "rpm -i /root/jdk-8u171-linux-x64.rpm"
+    register: java_installed
+    ignore_errors: yes
+  - debug:
+            var: java_installed.stdout
+  - name: installing hadoop
+    shell: "rpm -ivh /root/hadoop-1.2.1-1.x86_64.rpm --force"
+    register: hadoop_installed
+    ignore_errors: yes
+  - debug:
+          var: hadoop_installed.stdout
+
+  - name: creating datanode directory
+    file:
+            path: "{{ namenode_dir }}"
+            state: directory
+            mode: "0777"
+  - name: copying hdfs-site
+    template:
+            src: "/root/hadoop/name/hdfs-site.xml"
+            dest: "/etc/hadoop/hdfs-site.xml"
+  - name: copying core-site
+    template:
+            src: "/root/hadoop/name/core-site.xml"
+            dest: "/etc/hadoop/core-site.xml"
+  - name: format namenode
+    shell: "echo Y | hadoop namenode -format"
+    register: format
+  - debug:
+          var: format
+  - name: starting service
+    shell: "hadoop-daemon.sh start namenode"
+    register: service
+  - debug:
+          var: service
+  - name: checking status 
+    shell: "jps"
+    register: jps
+  - debug:
+          var: jps_stdout_lines
+
+
+
